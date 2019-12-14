@@ -28,13 +28,13 @@ class Gaussian()
         self.epsilon_noise = Normal(torch.tensor([0.0]), torch.tensor([1.0]))
         
     
-    def sigma(self,):
+    def sigma(self):
         sigma= torch.log1p(torch.exp(self.rho))
         return sigma
         
-    def sample(self, sigma,):
+    def sample(self):
         
-        return self.mu + sigma * self.epsilon_noise.sample(torch.shape(self.mu))
+        return self.mu + self.sigma() * self.epsilon_noise.sample(torch.shape(self.mu))
      
     
 
