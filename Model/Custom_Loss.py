@@ -13,7 +13,7 @@ class UCLLoss(nn.Module):
             assert (len(sigma_init) == num_layers), "you didn't specify a sigma_init for all the layers"
             self.sigma_init = sigma_init
         else:
-            self.sigma_init = [sigma_init[0] for _ in num_layers]
+            self.sigma_init = [sigma_init[0] for _ in range(num_layers)]
 
     def forward(self, output, target, new_model=None, old_model=None):
         if old_model is not None and new_model is not None:

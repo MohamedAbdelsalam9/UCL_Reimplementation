@@ -2,15 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from torch.distributions import normal
+from torch.distributions.normal import Normal
 import math
 
-class Gaussian():
+class Gaussian(object):
     def __init__(self, mu, rho):
         self.mu = mu
         self.rho = rho
         # noise is always in between 0 and 1
-        self.epsilon_noise = normal(torch.tensor([0.0]), torch.tensor([1.0]))
+        self.epsilon_noise = Normal(torch.tensor([0.0]), torch.tensor([1.0]))
 
     def sigma(self):
         sigma = torch.log1p(torch.exp(self.rho))
@@ -22,7 +22,7 @@ class Gaussian():
 
 class BayesLinear(nn.Module):
     def __init__(self, in_shape, out_shape, ratio):
-        super(BayesLinear).__init__()
+        super(BayesLinear, self).__init__()
         self.in_shape = in_shape
         self.out_shape = out_shape
 
@@ -43,20 +43,21 @@ class BayesLinear(nn.Module):
         self.weight_rho = nn.Parameter(torch.zeros((out_shape, 1)), requires_grad=True)
 
         #Gaussian object for the weight
-        self.weight= Gaussian(self.weight_mu, self.weight_rho)
+        self.weight = Gaussian(self.weight_mu, self.weight_rho)
+        # self.weight =
 
 
     def forward(self, input, sample=False):
         device = input.device
 
         if sample==False:
-            weight= self.weight_mu
+            self.weight= self.weight_mu
             bias= self.bias
         else:
             weight= self.weight.sample()
             bias=self.bias
 
-        x= F.Linear(input, weight).to(device)
+        x= F.Linear(input, weight, bias).to(device)
 
         return x
 
@@ -64,26 +65,23 @@ class BayesLinear(nn.Module):
 # from the paper number of nodes for our task:  256. 2 layers
 class BayesNet(nn.Module):
     def __init__(self, input_shape, task_cla ,num_hidden_layers=1, hidden_sizes = [128], ratio=0.5):
-        super(BayesNet).__init__()
+        super(BayesNet, self).__init__()
         if len(hidden_sizes) == 1:
-            self.hidden_sizes = [hidden_sizes[0] for i in range(num_hidden_layers)]
+            self.hidden_sizes = [hidden_sizes[0] for _ in range(num_hidden_layers)]
         else:
             assert (len(hidden_sizes) == num_hidden_layers), "You didn't specify the hidden shapes of all the layers"
+            self.hidden_sizes = hidden_sizes
 
-
-        self.hidden_sizes = hidden_sizes
         self.num_hidden_layers = num_hidden_layers
 
         self.task_cla= task_cla
 
-        self.layers= nn.ModuleList(BayesLinear(input_shape,hidden_sizes[0], ratio))
-        self.layers= self.layers.extend(nn.ModuleList([ BayesLinear(hidden_sizes[i],hidden_sizes[i+1], ratio) for i in range(1,len(hidden_sizes)-1)]))
+        self.layers= nn.ModuleList([BayesLinear(input_shape,hidden_sizes[0], ratio)])
+        self.layers.extend(nn.ModuleList([ BayesLinear(self.hidden_sizes[i],self.hidden_sizes[i+1], ratio)
+                                           for i in range(self.num_hidden_layers - 1)]))
 
-        self.last_layer= BayesLinear(hidden_sizes[-1], 2, ratio)
-
-
-        self.output_layer=[nn.ModuleList([self.last_layer.clone() for t in range(len(self.task_cla))])]
-        self.output_layer= torch.stack(self.output_layer)
+        self.output_layer = nn.ModuleList([BayesLinear(hidden_sizes[-1], num_class, ratio) for _, num_class in self.task_cla])
+        # self.output_layer= torch.stack(self.output_layer)
 
         self.relu = torch.nn.ReLU()
 
@@ -95,8 +93,6 @@ class BayesNet(nn.Module):
             x= self.relu(x)
 
         #the final stacked output
-        output= [ self.output_layer[t](x) for t in range(len(self.task_cla))]
-
-
+        output = [self.output_layer[t](x) for t in range(len(self.task_cla))]
         return output
 
