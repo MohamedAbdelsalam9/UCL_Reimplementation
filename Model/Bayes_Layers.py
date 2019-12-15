@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.distributions import normal
-
+import math
 
 class Gaussian():
     def __init__(self, mu, rho):
@@ -25,13 +25,25 @@ class BayesLinear(nn.Module):
         super(BayesLinear).__init__()
         self.in_shape = in_shape
         self.out_shape = out_shape
-        
+
+        self.bias = nn.Parameter(torch.Tensor(out_shape).uniform_(0, 0))
+
+        #portion for init. I picked up this as I am not clear on init.
+        var = 2 / in_shape
+        ratio_var = var * ratio
+        mu_var = var - ratio_var
+        noise_std, mu_std = math.sqrt(ratio_var), math.sqrt(mu_var)
+        bound = math.sqrt(3.0) * mu_std
+        rho_init = np.log(np.exp(noise_std) - 1)
+
         self.weight_mu = nn.Parameter(torch.zeros((out_shape, in_shape)), requires_grad=True)
+        nn.init.uniform_(self.weight_mu, -bound, bound)
+
+        self.weight_rho = nn.Parameter(torch.Tensor(out_shape, 1).uniform_(rho_init, rho_init))
         self.weight_rho = nn.Parameter(torch.zeros((out_shape, 1)), requires_grad=True)
 
         #Gaussian object for the weight
         self.weight= Gaussian(self.weight_mu, self.weight_rho)
-
 
         
     def forward(self, input, sample=False):
