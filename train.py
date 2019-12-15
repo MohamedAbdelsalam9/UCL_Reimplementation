@@ -20,6 +20,7 @@ parser.add_argument('--wandb_project', type=str, default='ucl')
 parser.add_argument('--beta', type=float, default=0.0001)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--lr_rho', type=float, default=0.001)
+parser.add_argument('--num_hidden_layers', type=int, default=1)
 # parser.add_argument('--optimizer', type=str, default='adam')
 
 args = parser.parse_args()
@@ -39,6 +40,7 @@ config['epoch'] = 0
 config['task_id'] = 0
 
 # config['optimizer'] = args.optimizer
+config['num_hidden_layers'] = args.num_hidden_layers
 config['beta'] = args.beta
 config['lr'] = args.lr
 config['lr_rho'] = args.lr_rho
@@ -54,10 +56,13 @@ if __name__ == '__main__':
     config['num_tasks'] = len(taskcla)
     config['classes_per_task'] = [c_t for _, c_t in taskcla]
 
-    # model = BayesNet(input_size, taskcla, num_hidden_layers=1, hidden_sizes=[128], ratio=0.5)
-    new_model = BayesNet(input_size, 10, num_hidden_layers=1, hidden_sizes=[128], ratio=0.5)
+    # model = BayesNet(input_size, taskcla, num_hidden_layers=config['num_hidden_layers'],
+    #                  hidden_sizes=[128], ratio=0.5)
+    new_model = BayesNet(input_size, 10, num_hidden_layers=config['num_hidden_layers'],
+                         hidden_sizes=[128], ratio=0.5)
     new_model.to(config['device'])
-    criterion = UCLLoss(config['beta'])
+    # todo specify sigma_init
+    criterion = UCLLoss(config['beta'], sigma_init=[0], num_layers=config['num_hidden_layers'])
     optimizer = Adam([
         {"params": [p for name, p in new_model.named_parameters() if "rho" not in name], "lr": config['lr']},
         {"params": [p for name, p in new_model.named_parameters() if "rho" in name], "lr": config['lr_rho']}],
