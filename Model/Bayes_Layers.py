@@ -51,18 +51,19 @@ class BayesLinear(nn.Module):
 
         if sample==False:
             weight= self.weight_mu
+            bias= self.bias
         else:
             weight= self.weight.sample()
+            bias=self.bias
 
-#        output = torch.zeros((self.out_shape)).to(device)
         x= F.Linear(input, weight).to(device)
-#        return output
+
         return x
 
 
 # from the paper number of nodes for our task:  256. 2 layers
 class BayesNet(nn.Module):
-    def __init__(self, in_shape, out_shape, task_cla ,num_hidden_layers=1, hidden_sizes = [128], ratio=0.5, split=True):
+    def __init__(self, input_shape, task_cla ,num_hidden_layers=1, hidden_sizes = [128], ratio=0.5):
         super(BayesNet).__init__()
         if len(hidden_sizes) == 1:
             self.hidden_sizes = [hidden_sizes[0] for i in range(num_hidden_layers)]
@@ -70,15 +71,15 @@ class BayesNet(nn.Module):
             assert (len(hidden_sizes) == num_hidden_layers), "You didn't specify the hidden shapes of all the layers"
 
 
-
         self.hidden_sizes = hidden_sizes
         self.num_hidden_layers = num_hidden_layers
-        self.split= split
+
         self.task_cla= task_cla
 
-        self.layers= nn.ModuleList([ BayesLinear(hidden_sizes[i],hidden_sizes[i+1]) for i in range(len(hidden_sizes)-1)])
+        self.layers= nn.ModuleList(BayesLinear(input_shape,hidden_sizes[0], ratio))
+        self.layers= self.layers.extend(nn.ModuleList([ BayesLinear(hidden_sizes[i],hidden_sizes[i+1], ratio) for i in range(1,len(hidden_sizes)-1)]))
 
-        self.last_layer= BayesLinear(hidden_sizes[-1], 2)
+        self.last_layer= BayesLinear(hidden_sizes[-1], 2, ratio)
 
 
         self.output_layer=[nn.ModuleList([self.last_layer.clone() for t in range(len(self.task_cla))])]
