@@ -22,12 +22,12 @@ class BayesNet(nn.Module):
     def __init__(self, in_shape, out_shape, num_hidden_layers=1, hidden_sizes=[128], ratio=0.5):
         super(BayesNet, self).__init__()
         if len(hidden_sizes) == 1:
-            self.hidden_sizes = [hidden_sizes[0] for i in range(num_hidden_layers)]
+            self.hidden_sizes = [hidden_sizes[0] for _ in range(num_hidden_layers)]
         else:
             assert (len(hidden_sizes) == num_hidden_layers), "You didn't specify the hidden shapes of all the layers"
         self.hidden_sizes = hidden_sizes
         self.num_hidden_layers = num_hidden_layers
-        self.layers = [BayesLinear(in_shape, out_shape) for _ in range(num_hidden_layers)]
+        self.layers = nn.ModuleList([BayesLinear(in_shape, out_shape) for _ in range(num_hidden_layers)])
 
     def forward(self, input, sample=False):
         x = self.layers[0](input)
