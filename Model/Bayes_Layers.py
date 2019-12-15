@@ -47,24 +47,30 @@ class BayesLinear(nn.Module):
 #        return output
         return x
 
-    
-#[128,245]
+
+# from the paper number of nodes for our task:  256. 2 layers
 class BayesNet(nn.Module):
-    def __init__(self, in_shape, out_shape, num_hidden_layers=1, hidden_sizes = [128], ratio=0.5):
+    def __init__(self, in_shape, out_shape, task_cla ,num_hidden_layers=1, hidden_sizes = [128], ratio=0.5, split=True):
         super(BayesNet).__init__()
         if len(hidden_sizes) == 1:
             self.hidden_sizes = [hidden_sizes[0] for i in range(num_hidden_layers)]
         else:
             assert (len(hidden_sizes) == num_hidden_layers), "You didn't specify the hidden shapes of all the layers"
 
-        # default number of nodes for our task:  256. 2 layers
+
 
         self.hidden_sizes = hidden_sizes
         self.num_hidden_layers = num_hidden_layers
+        self.split= split
+        self.task_cla= task_cla
 
         self.layers= nn.ModuleList([ BayesLinear(hidden_sizes[i],hidden_sizes[i+1]) for i in range(len(hidden_sizes)-1)])
 
-        self.output_layer= BayesLinear(hidden_sizes[-1], 1)
+        self.last_layer= BayesLinear(hidden_sizes[-1], 2)
+
+
+        self.output_layer=[nn.ModuleList([self.last_layer.clone() for t in range(len(self.task_cla))])]
+        self.output_layer= torch.stack(self.output_layer)
 
         self.relu = torch.nn.ReLU()
 
@@ -74,4 +80,10 @@ class BayesNet(nn.Module):
         for layer in self.layers[1:]:
             x = layer(x)
             x= self.relu(x)
-        return x
+
+        #the final stacked output
+        output= [ self.output_layer[t](x) for t in range(len(self.task_cla))]
+
+
+        return output
+
