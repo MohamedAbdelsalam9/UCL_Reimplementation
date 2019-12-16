@@ -56,10 +56,9 @@ class UCLLoss(nn.Module):
             sigma_old_task_current_layer= torch.log1p(torch.exp(old_model_layer.rho))
             #to get sigma old task, for layer l-1
             if (i-1)>=0:
-                sigma_old_task_previous_layer= torch.log1p(torch.exp(old_model.children()[i-1].rho))
+                sigma_old_task_previous_layer= torch.log1p(torch.exp(old_model.layers()[i-1].rho))
                 strength_outgoing_from_current_node = sigma_init_layer / sigma_old_task_current_layer
                 strength_incoming = sigma_init_layer_previous / sigma_old_task_previous_layer
-
                 regularization_strength_for_weight = torch.max(strength_outgoing_from_current_node, strength_incoming)
             else:
                 regularization_strength_for_weight= sigma_init_layer / sigma_old_task_current_layer
@@ -76,8 +75,8 @@ class UCLLoss(nn.Module):
             L1_regularizer_magnitude_learnt_weights+= ((sigma_init_layer)**2)* term2.norm(1)
 
             simga_current_task_layer= torch.log1p(torch.exp(current_model_layer.rho))
-            sigma_ratio_current_old= simga_current_task_layer/sigma_old_task_current_layer
-            term3= (sigma_ratio_current_old**2) - torch.log((sigma_ratio_current_old**2))
+            sigma_ratio_current_to_old= simga_current_task_layer/sigma_old_task_current_layer
+            term3= (sigma_ratio_current_to_old**2) - torch.log((sigma_ratio_current_to_old**2))
 
             term4= (simga_current_task_layer**2) - torch.log((simga_current_task_layer**2))
 
