@@ -4,14 +4,16 @@ from torch.optim import Adam
 import argparse
 import os
 import wandb
-from Util.data_loader import BatchIterator, get_split_mnist
+from Util.data_loader import BatchIterator, get_split_mnist, get_split_notmnist
 from Util.per_task_trainer import task_train, task_eval
 from Util.util import print_msg
 from Model.Bayes_Layers import BayesNet
 from Model.Custom_Loss import UCLLoss
+import logging
+import numpy as np
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=str, default="split_mnist")  # split_mnist
+parser.add_argument('--dataset', type=str, default="split_mnist")  # split_mnist, split_notmnist
 parser.add_argument('--epochs_per_task', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=10)
 parser.add_argument('--seed', type=int, default=100)
@@ -34,7 +36,7 @@ config['seed'] = args.seed
 config['device'] = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 config['batch_size'] = args.batch_size
 config['flatten'] = False
-if args.dataset in ['split_mnist']:
+if args.dataset in ['split_mnist', 'split_notmnist']:
     config['flatten'] = True
 config['epochs_per_task'] = args.epochs_per_task
 config['epoch'] = 0
@@ -49,9 +51,16 @@ config['lr'] = args.lr
 config['lr_rho'] = args.lr_rho
 config['no_ucl_reg'] = args.no_ucl_reg
 
+torch.random.manual_seed(config['seed'])
+np.random.seed(config['seed'])
+
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
     if args.dataset == 'split_mnist':
         data, taskcla, inputsize = get_split_mnist(datapath=config['data_path'], tasknum=5)
+    elif args.dataset == 'split_notmnist':
+        data, taskcla, inputsize = get_split_notmnist(datapath=config['data_path'], tasknum=5)
 
     if config['flatten']:
         input_size = inputsize[0] * inputsize[1] * inputsize[2]
