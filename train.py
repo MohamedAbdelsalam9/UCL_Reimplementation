@@ -5,7 +5,7 @@ import argparse
 import os
 import wandb
 from Util.data_loader import BatchIterator, get_split_mnist
-from Util.per_task_trainer import task_train, copy_freeze
+from Util.per_task_trainer import task_train, task_eval
 from Util.util import print_msg
 from Model.Bayes_Layers import BayesNet
 from Model.Custom_Loss import UCLLoss
@@ -22,7 +22,7 @@ parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--lr_rho', type=float, default=0.001)
 parser.add_argument('--num_hidden_layers', type=int, default=2)
 parser.add_argument('--hidden_size', type=int, default=256)  # todo make it an array
-# parser.add_argument('--optimizer', type=str, default='adam')
+parser.add_argument('--no_ucl_reg', action='store_true') # dont use the ucl regularizer, only the cross entropy loss
 
 args = parser.parse_args()
 sys.path.append(args.data_path)
@@ -47,6 +47,7 @@ config['hidden_size'] = [args.hidden_size]  # todo make it an array
 config['beta'] = args.beta
 config['lr'] = args.lr
 config['lr_rho'] = args.lr_rho
+config['no_ucl_reg'] = args.no_ucl_reg
 
 if __name__ == '__main__':
     if args.dataset == 'split_mnist':
@@ -62,8 +63,7 @@ if __name__ == '__main__':
                          hidden_sizes=config['hidden_size'], ratio=0.5)
 
     new_model.to(config['device'])
-    # todo specify sigma_init
-    criterion = UCLLoss(config['beta'], sigma_init=[0], num_layers=config['num_hidden_layers'])
+    criterion = UCLLoss(config['beta'], sigma_init=[0.06], num_layers=config['num_hidden_layers'])
     optimizer = Adam([
         {"params": [p for name, p in new_model.named_parameters() if "rho" not in name], "lr": config['lr']},
         {"params": [p for name, p in new_model.named_parameters() if "rho" in name], "lr": config['lr_rho']}],
@@ -86,5 +86,7 @@ if __name__ == '__main__':
                                    flatten=config['flatten'])
         # get best model for the new task
         new_model = task_train(train_data, valid_data, new_model, criterion, optimizer, config, wandb)
+        task_eval(data, new_model, config, wandb)
+
         torch.save({'model_State_dict': new_model.state_dict(), 'config': config},
                    os.path.join(wandb.run.dir, f"best_model_task_{task_id}"))

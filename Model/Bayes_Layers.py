@@ -6,7 +6,7 @@ from torch.distributions.normal import Normal
 import math
 
 
-class Gaussian(object):
+class GaussianSampler(object):
     def __init__(self, mu, rho):
         self.mu = mu
         self.rho = rho
@@ -26,7 +26,8 @@ class BayesLinear(nn.Module):
         self.in_shape = in_shape
         self.out_shape = out_shape
 
-        self.bias = nn.Parameter(torch.Tensor(out_shape).uniform_(0, 0))
+        self.bias = nn.Parameter(torch.zeros(out_shape))
+        self.ratio = ratio
 
         #todo portion for init. I picked up this as I am not clear on init.
         var = 2 / in_shape
@@ -42,8 +43,8 @@ class BayesLinear(nn.Module):
         self.weight_rho = nn.Parameter(torch.zeros((out_shape, 1)), requires_grad=True)
         nn.init.uniform_(self.weight_rho, rho_init, rho_init)
 
-        # Gaussian sampler for the weight
-        self.weight_sampler = Gaussian(self.weight_mu, self.weight_rho)
+        # Gaussian sampler for the weight and bias
+        self.weight_sampler = GaussianSampler(self.weight_mu, self.weight_rho)
 
     def forward(self, input_data, sample=False):
         if not sample:
@@ -66,16 +67,16 @@ class BayesNet(nn.Module):
             self.hidden_sizes = hidden_sizes
 
         self.num_hidden_layers = num_hidden_layers
-
         self.task_cla = task_cla
+        self.ratio = ratio
 
         self.layers = nn.ModuleList([BayesLinear(input_shape, hidden_sizes[0], ratio)])
         self.layers.extend(nn.ModuleList([BayesLinear(self.hidden_sizes[i], self.hidden_sizes[i + 1], ratio)
                                           for i in range(self.num_hidden_layers - 1)]))
 
+        # the multi-head output layer
         self.output_layer = nn.ModuleList(
-            [BayesLinear(hidden_sizes[-1], num_class, ratio) for _, num_class in self.task_cla])
-        # self.output_layer= torch.stack(self.output_layer)
+            [nn.Linear(hidden_sizes[-1], num_class) for _, num_class in self.task_cla])
 
         self.relu = torch.nn.ReLU()
 
@@ -86,6 +87,6 @@ class BayesNet(nn.Module):
             x = layer(x)
             x = self.relu(x)
 
-        # the final stacked output
+        # the final output per task (multi_head)
         output = [self.output_layer[t](x) for t in range(len(self.task_cla))]
         return output
