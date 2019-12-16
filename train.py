@@ -12,7 +12,7 @@ from Model.Custom_Loss import UCLLoss
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default="split_mnist")  # split_mnist
-parser.add_argument('--epochs_per_task', type=int, default=1)
+parser.add_argument('--epochs_per_task', type=int, default=2)
 parser.add_argument('--batch_size', type=int, default=10)
 parser.add_argument('--seed', type=int, default=100)
 parser.add_argument('--data_path', type=str, default="Dataset")

@@ -25,4 +25,4 @@ class UCLLoss(nn.Module):
         return F.cross_entropy(output, target, reduction="mean")
 
     def regularizer(selfSelf, new_model, old_model):
-            return 0 #todo
+            return torch.tensor(0) #todo
