@@ -18,6 +18,8 @@ class UCLLoss(nn.Module):
     def forward(self, output, target, new_model=None, old_model=None):
         if old_model is not None and new_model is not None:
             return self.nll_loss(output, target) + self.regularizer(new_model, old_model)
+        else:
+            return self.nll_loss(output, target)
 
     def nll_loss(self, output, target):
         return F.cross_entropy(output, target, reduction="mean")

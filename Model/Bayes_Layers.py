@@ -5,11 +5,11 @@ import numpy as np
 from torch.distributions.normal import Normal
 import math
 
+
 class Gaussian(object):
     def __init__(self, mu, rho):
         self.mu = mu
         self.rho = rho
-        # noise is always in between 0 and 1
         self.epsilon_noise = Normal(torch.tensor([0.0]), torch.tensor([1.0]))
 
     def sigma(self):
@@ -17,7 +17,7 @@ class Gaussian(object):
         return sigma
 
     def sample(self):
-        return self.mu + self.sigma() * self.epsilon_noise.sample(torch.shape(self.mu))
+        return self.mu + self.sigma() * self.epsilon_noise.sample(self.mu.shape).squeeze()
 
 
 class BayesLinear(nn.Module):
@@ -28,7 +28,7 @@ class BayesLinear(nn.Module):
 
         self.bias = nn.Parameter(torch.Tensor(out_shape).uniform_(0, 0))
 
-        #portion for init. I picked up this as I am not clear on init.
+        #todo portion for init. I picked up this as I am not clear on init.
         var = 2 / in_shape
         ratio_var = var * ratio
         mu_var = var - ratio_var
@@ -39,32 +39,25 @@ class BayesLinear(nn.Module):
         self.weight_mu = nn.Parameter(torch.zeros((out_shape, in_shape)), requires_grad=True)
         nn.init.uniform_(self.weight_mu, -bound, bound)
 
-        self.weight_rho = nn.Parameter(torch.Tensor(out_shape, 1).uniform_(rho_init, rho_init))
         self.weight_rho = nn.Parameter(torch.zeros((out_shape, 1)), requires_grad=True)
+        nn.init.uniform_(self.weight_rho, rho_init, rho_init)
 
-        #Gaussian object for the weight
-        self.weight = Gaussian(self.weight_mu, self.weight_rho)
-        # self.weight =
+        # Gaussian sampler for the weight
+        self.weight_sampler = Gaussian(self.weight_mu, self.weight_rho)
 
-
-    def forward(self, input, sample=False):
-        device = input.device
-
-        if sample==False:
-            self.weight= self.weight_mu
-            bias= self.bias
+    def forward(self, input_data, sample=False):
+        if not sample:
+            weight = self.weight_mu
+            bias = self.bias
         else:
-            weight= self.weight.sample()
-            bias=self.bias
-
-        x= F.Linear(input, weight, bias).to(device)
-
+            weight = self.weight_sampler.sample()
+            bias = self.bias
+        x = F.linear(input_data, weight, bias)
         return x
 
 
-# from the paper number of nodes for our task:  256. 2 layers
 class BayesNet(nn.Module):
-    def __init__(self, input_shape, task_cla ,num_hidden_layers=1, hidden_sizes = [128], ratio=0.5):
+    def __init__(self, input_shape, task_cla, num_hidden_layers=1, hidden_sizes=(128,), ratio=0.5):
         super(BayesNet, self).__init__()
         if len(hidden_sizes) == 1:
             self.hidden_sizes = [hidden_sizes[0] for _ in range(num_hidden_layers)]
@@ -74,25 +67,25 @@ class BayesNet(nn.Module):
 
         self.num_hidden_layers = num_hidden_layers
 
-        self.task_cla= task_cla
+        self.task_cla = task_cla
 
-        self.layers= nn.ModuleList([BayesLinear(input_shape,hidden_sizes[0], ratio)])
-        self.layers.extend(nn.ModuleList([ BayesLinear(self.hidden_sizes[i],self.hidden_sizes[i+1], ratio)
-                                           for i in range(self.num_hidden_layers - 1)]))
+        self.layers = nn.ModuleList([BayesLinear(input_shape, hidden_sizes[0], ratio)])
+        self.layers.extend(nn.ModuleList([BayesLinear(self.hidden_sizes[i], self.hidden_sizes[i + 1], ratio)
+                                          for i in range(self.num_hidden_layers - 1)]))
 
-        self.output_layer = nn.ModuleList([BayesLinear(hidden_sizes[-1], num_class, ratio) for _, num_class in self.task_cla])
+        self.output_layer = nn.ModuleList(
+            [BayesLinear(hidden_sizes[-1], num_class, ratio) for _, num_class in self.task_cla])
         # self.output_layer= torch.stack(self.output_layer)
 
         self.relu = torch.nn.ReLU()
 
     def forward(self, input, sample=False):
         x = self.layers[0](input)
-        x= self.relu(x)
+        x = self.relu(x)
         for layer in self.layers[1:]:
             x = layer(x)
-            x= self.relu(x)
+            x = self.relu(x)
 
-        #the final stacked output
+        # the final stacked output
         output = [self.output_layer[t](x) for t in range(len(self.task_cla))]
         return output
-
