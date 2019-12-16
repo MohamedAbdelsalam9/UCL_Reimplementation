@@ -4,8 +4,48 @@ import torch
 from torchvision import datasets, transforms
 from sklearn.utils import shuffle
 
-# code from https://github.com/csm9493/UCL/blob/master/dataloaders/split_mnist.py
-def get_data(seed=0, fixed_order=False, pc_valid=0, datapath=".", tasknum = 5):
+
+class BatchIterator:
+    def __init__(self, task_data, batch_size=1, flatten=False, shuffle=False):
+        if flatten:
+            self.task_data_x = task_data['x'].reshape((task_data['x'].shape[0], -1))
+        else:
+            self.task_data_x = task_data['x']
+        self.task_data_y = task_data['y']
+        self.data_size = self.task_data_x.shape[0]
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+
+    def __iter__(self):
+        self.minibatch_id = 0
+        self.start_sample_id = 0
+        self.end_sample_id = self.start_sample_id + self.batch_size
+        if self.shuffle:
+            pass
+            # todo shuffle data
+        return self
+    def __next__(self):
+        if self.end_sample_id < self.data_size:
+            result = (self.minibatch_id,
+                      self.task_data_x[self.start_sample_id:self.end_sample_id],
+                      self.task_data_y[self.start_sample_id:self.end_sample_id])
+            self.start_sample_id += self.batch_size
+            self.end_sample_id += self.batch_size
+            self.minibatch_id += 1
+            return result
+        elif self.start_sample_id < self.data_size:
+            result = (self.minibatch_id,
+                      self.task_data_x[self.start_sample_id:-1],
+                      self.task_data_y[self.start_sample_id:-1])
+            self.start_sample_id = self.data_size
+            self.minibatch_id += 1
+            return result
+        else:
+            raise StopIteration
+
+
+# get_"dataset" functions are from https://github.com/csm9493/UCL/blob/master/dataloaders/split_mnist.py
+def get_split_mnist(datapath=".", tasknum = 5):
     split_mnist_datapath = os.path.join(datapath, "binary_split_mnist")
     if tasknum >5:
         tasknum = 5
@@ -73,3 +113,19 @@ def get_data(seed=0, fixed_order=False, pc_valid=0, datapath=".", tasknum = 5):
     data['ncla'] = n
 
     return data, taskcla, size
+
+
+# class TasksIterator:
+#     def __init__(self, data):
+#         self.data = data
+#         self.tasks_num = len(data)
+#     def __iter__(self):
+#         self.task_id = 0
+#         return self
+#     def __next__(self):
+#         if self.task_id < self.tasks_num:
+#             x = self.task_id
+#             self.task_id += 1
+#             return x, BatchIterator(self.data[x])
+#         else:
+#             raise StopIteration
