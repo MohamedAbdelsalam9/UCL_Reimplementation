@@ -38,16 +38,18 @@ def task_train(train_data, valid_data, new_model, criterion, optimizer, config, 
             eval(valid_data, new_model, config)
     return new_model
 
+
 def task_eval(tasks_data, model, config, wandb):
     # log the accuracies of the new model on all observed tasks
     acc_dict = {}
     for task_id in range(config['task_id'] + 1):
-        valid_data = BatchIterator(tasks_data[task_id]['valid'], config['batch_size'], shuffle=False,
-                      flatten=config['flatten'])
-        _, acc_dict[f"task_{task_id}_valid_acc"] = \
-            eval(valid_data, model, config)
-    acc_dict[f"average_valid_acc"] = sum(acc_dict.values()) / len(acc_dict)
+        test_data = BatchIterator(tasks_data[task_id]['test'], config['batch_size'], shuffle=False,
+                                  flatten=config['flatten'])
+        _, acc_dict[f"task_{task_id}_test_acc"] = \
+            eval(test_data, model, config)
+    acc_dict[f"average_test_acc"] = sum(acc_dict.values()) / len(acc_dict)
     log_task(config['task_id'], acc_dict, wandb)
+
 
 def epoch_train(task_data, new_model, old_model, criterion, optimizer, config):
     new_model.train()
@@ -61,9 +63,9 @@ def epoch_train(task_data, new_model, old_model, criterion, optimizer, config):
         output = new_model(minibatch_x, sample=True)[config["task_id"]]
 
         if config['no_ucl_reg'] or config['task_id'] == 0:
-            loss = criterion(output, minibatch_y) # no regularizer
+            loss = criterion(output, minibatch_y)  # no regularizer
         else:
-            loss = criterion(output, minibatch_y, old_model, new_model)
+            loss = criterion(output, minibatch_y, new_model, old_model)
 
         ucl_loss += loss.item() * minibatch_x.shape[0]
 

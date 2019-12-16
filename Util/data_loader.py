@@ -44,7 +44,7 @@ class BatchIterator:
             raise StopIteration
 
 
-# get_"dataset" functions are from https://github.com/csm9493/UCL/blob/master/dataloaders/split_mnist.py
+# get_"dataset" functions are from https://github.com/csm9493/UCL/blob/master/dataloaders/
 def get_split_mnist(datapath=".", tasknum = 5):
     split_mnist_datapath = os.path.join(datapath, "binary_split_mnist")
     if tasknum >5:
@@ -115,17 +115,4 @@ def get_split_mnist(datapath=".", tasknum = 5):
     return data, taskcla, size
 
 
-# class TasksIterator:
-#     def __init__(self, data):
-#         self.data = data
-#         self.tasks_num = len(data)
-#     def __iter__(self):
-#         self.task_id = 0
-#         return self
-#     def __next__(self):
-#         if self.task_id < self.tasks_num:
-#             x = self.task_id
-#             self.task_id += 1
-#             return x, BatchIterator(self.data[x])
-#         else:
-#             raise StopIteration
+

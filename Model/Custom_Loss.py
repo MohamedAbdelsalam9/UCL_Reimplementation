@@ -10,9 +10,9 @@ class UCLLoss(nn.Module):
         self.beta = beta
         if len(sigma_init) > 1:  # todo sigma init for convolutional
             assert (len(sigma_init) == num_layers), "you didn't specify a sigma_init for all the layers"
-            self.sigma_init = sigma_init
+            self.register_buffer('sigma_init', torch.tensor(sigma_init))
         else:
-            self.sigma_init = [sigma_init[0] for _ in range(num_layers)]
+            self.register_buffer('sigma_init', torch.tensor([sigma_init[0] for _ in range(num_layers)]))
 
     def forward(self, output, target, new_model=None, old_model=None):
         if old_model is not None and new_model is not None:
@@ -41,13 +41,13 @@ class UCLLoss(nn.Module):
                 old_bias = old_model_layer.bias
 
                 # careful sigma init. not var
-                sigma_init_cur_layer = torch.tensor(self.sigma_init[i])
+                sigma_init_cur_layer = self.sigma_init[i]
                 sigma_old_task_cur_layer = torch.log1p(torch.exp(old_model_layer.weight_rho))
                 strength_old_task_cur_layer = sigma_init_cur_layer / sigma_old_task_cur_layer
 
                 # to get sigma old task, for layer l-1
                 if (i - 1) >= 0:
-                    sigma_init_layer_previous = torch.tensor(self.sigma_init[i - 1])
+                    sigma_init_layer_previous = self.sigma_init[i - 1]
                     sigma_old_task_prev_layer = torch.log1p(torch.exp(old_model.layers[i - 1].weight_rho))
                     strength_old_task_prev_layer = sigma_init_layer_previous / sigma_old_task_prev_layer
                     regularization_strength_weight = torch.max(strength_old_task_cur_layer,

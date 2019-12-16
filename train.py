@@ -61,9 +61,9 @@ if __name__ == '__main__':
 
     new_model = BayesNet(input_size, taskcla, num_hidden_layers=config['num_hidden_layers'],
                          hidden_sizes=config['hidden_size'], ratio=0.5)
-
     new_model.to(config['device'])
     criterion = UCLLoss(config['beta'], sigma_init=[0.06], num_layers=config['num_hidden_layers'])
+    criterion.to(config['device'])
     optimizer = Adam([
         {"params": [p for name, p in new_model.named_parameters() if "rho" not in name], "lr": config['lr']},
         {"params": [p for name, p in new_model.named_parameters() if "rho" in name], "lr": config['lr_rho']}],
