@@ -4,7 +4,7 @@ import torch
 from torchvision import datasets, transforms
 from torch import Tensor
 from imageio import imread
-
+from Util.util import print_msg
 
 class BatchIterator:
     def __init__(self, task_data, batch_size=1, flatten=False, shuffle=False):
@@ -196,7 +196,7 @@ def split_notMNIST_loader(root):
     for folder in folders:
         folder_path = os.path.join(root, folder)
         cnt = 0
-        print(folder)
+        print_msg(folder)
         for ims in os.listdir(folder_path):
             s = 'train'
             if cnt >= 40000:
@@ -213,7 +213,7 @@ def split_notMNIST_loader(root):
 
             except:
                 # Some images in the dataset are damaged
-                print("File {}/{} is datbroken".format(folder, ims))
+                print_msg("File {}/{} is datbroken".format(folder, ims))
         task_cnt += 1
 
     return data
