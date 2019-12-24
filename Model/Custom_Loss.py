@@ -8,15 +8,15 @@ class UCLLoss(nn.Module):
     def __init__(self, beta=0.0001, sigma_init=(0.06,), num_layers=1):
         super(UCLLoss, self).__init__()
         self.beta = beta
-        if len(sigma_init) > 1:  # todo sigma init for convolutional
+        if len(sigma_init) > 1:
             assert (len(sigma_init) == num_layers), "you didn't specify a sigma_init for all the layers"
-            self.sigma_init = sigma_init
+            self.register_buffer('sigma_init', torch.tensor(sigma_init))
         else:
-            self.sigma_init = [sigma_init[0] for _ in range(num_layers)]
+            self.register_buffer('sigma_init', torch.tensor([sigma_init[0] for _ in range(num_layers)]))
 
     def forward(self, output, target, new_model=None, old_model=None):
         if old_model is not None and new_model is not None:
-            return (self.nll_loss(output, target) + self.regularizer(new_model, old_model)) / output.shape[0]
+            return (self.nll_loss(output, target) / output.shape[0]) + self.regularizer(new_model, old_model)
         else:
             return self.nll_loss(output, target) / output.shape[0]
 
@@ -41,13 +41,13 @@ class UCLLoss(nn.Module):
                 old_bias = old_model_layer.bias
 
                 # careful sigma init. not var
-                sigma_init_cur_layer = torch.tensor(self.sigma_init[i])
+                sigma_init_cur_layer = self.sigma_init[i]
                 sigma_old_task_cur_layer = torch.log1p(torch.exp(old_model_layer.weight_rho))
                 strength_old_task_cur_layer = sigma_init_cur_layer / sigma_old_task_cur_layer
 
                 # to get sigma old task, for layer l-1
                 if (i - 1) >= 0:
-                    sigma_init_layer_previous = torch.tensor(self.sigma_init[i - 1])
+                    sigma_init_layer_previous = self.sigma_init[i - 1]
                     sigma_old_task_prev_layer = torch.log1p(torch.exp(old_model.layers[i - 1].weight_rho))
                     strength_old_task_prev_layer = sigma_init_layer_previous / sigma_old_task_prev_layer
                     regularization_strength_weight = torch.max(strength_old_task_cur_layer,
