@@ -111,9 +111,16 @@ def get_split_mnist(datapath=".", tasknum = 5):
                     (os.path.join(os.path.expanduser(split_mnist_datapath), 'data '+ str(i) + s + 'y.bin'))
 
     for t in range(tasknum):
+        valid_ratio = 0.15
+        train_ind = int(data[t]['train']['x'].shape[0] * (1 - valid_ratio))
+
         data[t]['valid'] = {}
-        data[t]['valid']['x'] = data[t]['train']['x'].clone()
-        data[t]['valid']['y'] = data[t]['train']['y'].clone()
+        # data[t]['valid']['x'] = data[t]['train']['x'].clone()
+        # data[t]['valid']['y'] = data[t]['train']['y'].clone()
+        data[t]['valid']['x'] = data[t]['train']['x'][train_ind:]
+        data[t]['valid']['y'] = data[t]['train']['y'][train_ind:]
+        data[t]['train']['x'] = data[t]['train']['x'][:train_ind]
+        data[t]['train']['y'] = data[t]['train']['y'][:train_ind]
 
     # Others
     n = 0
@@ -168,9 +175,16 @@ def get_split_notmnist(datapath=".", tasknum=5):
                                                           'data' + str(i) + s + 'y.bin'))
 
     for t in range(tasknum):
+        valid_ratio = 0.15
+        train_ind = int(data[t]['train']['x'].shape[0] * (1 - valid_ratio))
+
         data[t]['valid'] = {}
-        data[t]['valid']['x'] = data[t]['train']['x'].clone()
-        data[t]['valid']['y'] = data[t]['train']['y'].clone()
+        # data[t]['valid']['x'] = data[t]['train']['x'].clone()
+        # data[t]['valid']['y'] = data[t]['train']['y'].clone()
+        data[t]['valid']['x'] = data[t]['train']['x'][train_ind:]
+        data[t]['valid']['y'] = data[t]['train']['y'][train_ind:]
+        data[t]['train']['x'] = data[t]['train']['x'][:train_ind]
+        data[t]['train']['y'] = data[t]['train']['y'][:train_ind]
 
     # Others
     n = 0

@@ -22,9 +22,9 @@ parser.add_argument('--beta', type=float, default=0.0001)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--lr_rho', type=float, default=0.001)
 parser.add_argument('--num_hidden_layers', type=int, default=2)
-parser.add_argument('--hidden_size', type=int, default=256)  # todo make it an array
+parser.add_argument('--hidden_size', type=int, default=256)
 parser.add_argument('--no_ucl_reg', action='store_true') # dont use the ucl regularizer, only the cross entropy loss
-parser.add_argument('--lr_factor', type=int, default=3) #divide the learning rates by this every 5 epochs for 5 times
+parser.add_argument('--lr_factor', type=float, default=3.0) #divide the learning rates by this every 5 epochs for 5 times
 
 args = parser.parse_args()
 sys.path.append(args.data_path)
@@ -45,7 +45,7 @@ config["wandb_project"] = args.wandb_project
 
 # config['optimizer'] = args.optimizer
 config['num_hidden_layers'] = args.num_hidden_layers
-config['hidden_size'] = [args.hidden_size]  # todo make it an array
+config['hidden_size'] = [args.hidden_size]
 config['beta'] = args.beta
 config['lr'] = args.lr
 config['lr_rho'] = args.lr_rho
@@ -75,10 +75,11 @@ if __name__ == '__main__':
     criterion = UCLLoss(config['beta'], sigma_init=[0.06], num_layers=config['num_hidden_layers'])
     criterion.to(config['device'])
 
-    print_msg(f"using {config['device']}\n")
+    msg = f"using {config['device']}\n"
+    print_msg(msg)
 
-    wandb.init(project=config["wandb_project"], allow_val_change=True)
-    wandb.config.update(config, allow_val_change=True)
+    wandb.init(project=config["wandb_project"], config=config, allow_val_change=True)
+    # wandb.config.update(config, allow_val_change=True)
     wandb.watch(new_model)
 
     for task_id, num_classes in taskcla[config['task_id']:]:

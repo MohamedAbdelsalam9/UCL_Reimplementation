@@ -29,7 +29,6 @@ class BayesLinear(nn.Module):
         self.bias = nn.Parameter(torch.zeros(out_shape))
         self.ratio = ratio
 
-        #todo portion for init. I picked up this as I am not clear on init.
         var = 2 / in_shape
         ratio_var = var * ratio
         mu_var = var - ratio_var
